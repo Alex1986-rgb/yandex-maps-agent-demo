@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кабинет — ИИ-агент для Яндекс.Карт</title>
+<meta name="description" content="Демонстрационный кабинет: очередь подтверждений, карточка, отзывы, контент-план, позиции, эксперименты и лог агентов.">
+<style>
+:root{
+  --bg:#0b0d10;--bg2:#0e1216;--panel:#151a21;--panel2:#171d25;--line:#232b35;--line2:#2c3641;
+  --tx:#e7ecf2;--tx2:#9aa7b5;--tx3:#6b7886;
+  --acc:#e0a458;--acc2:#5ec8a4;--bad:#e2695f;--warn:#e0b93f;--rad:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);
+ font:400 15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--acc);text-decoration:none}
+h1,h2,h3{margin:0;line-height:1.25;letter-spacing:-.01em}
+button{font:inherit;cursor:pointer}
+.app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+
+/* sidebar */
+aside{background:var(--bg2);border-right:1px solid var(--line);padding:18px 14px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;gap:10px;align-items:center;padding:0 8px 16px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(140deg,var(--acc),#b9793a);
+ display:grid;place-items:center;font-weight:700;color:#1a1206;font-size:14px;flex:none}
+.brand b{font-size:14.5px;font-weight:600;display:block}
+.brand span{font-size:11.5px;color:var(--tx3);display:block}
+nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:var(--tx2);
+ font-size:14.5px;margin-bottom:2px;border:1px solid transparent}
+nav a:hover{background:var(--panel);color:var(--tx)}
+nav a.on{background:var(--panel2);color:var(--tx);border-color:var(--line2)}
+nav a .ic{width:18px;text-align:center;opacity:.85}
+nav a .cnt{margin-left:auto;font-size:11.5px;background:rgba(224,164,88,.16);color:var(--acc);
+ border-radius:99px;padding:1px 7px;font-weight:600}
+.side-note{margin-top:16px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);
+ font-size:12px;color:var(--tx3);line-height:1.5}
+
+/* header */
+main{min-width:0}
+header{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:16px 26px;border-bottom:1px solid var(--line);
+ background:rgba(11,13,16,.9);backdrop-filter:blur(8px);position:sticky;top:0;z-index:20}
+.org b{font-size:15px}
+.org span{display:block;font-size:12.5px;color:var(--tx3)}
+.pill{font-size:12px;border-radius:99px;padding:5px 11px;border:1px solid var(--line2);color:var(--tx2);background:var(--panel)}
+.pill.bad{color:var(--bad);border-color:rgba(226,105,95,.4);background:rgba(226,105,95,.1)}
+.pill.ok{color:var(--acc2);border-color:rgba(94,200,164,.35);background:rgba(94,200,164,.1)}
+.spacer{flex:1}
+.role{display:flex;background:var(--panel);border:1px solid var(--line2);border-radius:99px;padding:3px}
+.role button{background:none;border:0;color:var(--tx3);padding:6px 14px;border-radius:99px;font-size:13px}
+.role button.on{background:var(--acc);color:#1a1206;font-weight:600}
+
+/* content */
+.view{padding:24px 26px 60px;max-width:1180px}
+.vh{margin-bottom:18px}
+.vh h2{font-size:23px;font-weight:600}
+.vh p{margin:6px 0 0;color:var(--tx2);font-size:14.5px;max-width:760px}
+.row{display:grid;gap:14px}
+.c4{grid-template-columns:repeat(4,1fr)}.c3{grid-template-columns:repeat(3,1fr)}.c2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--rad);padding:16px 18px}
+.kpi .n{font-size:27px;font-weight:600;letter-spacing:-.02em}
+.kpi .l{font-size:12.5px;color:var(--tx3);margin-top:4px}
+.bad{color:var(--bad)}.ok{color:var(--acc2)}.warn{color:var(--warn)}.mut{color:var(--tx2)}
+.sm{font-size:13px}.xs{font-size:12px}
+
+/* task */
+.task{background:var(--panel);border:1px solid var(--line);border-radius:var(--rad);padding:16px 18px;margin-bottom:12px}
+.task .top{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.by{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);
+ border:1px solid var(--line2);border-radius:6px;padding:3px 8px}
+.task h3{font-size:16px;font-weight:600}
+.task .body{color:var(--tx2);font-size:14.5px;margin:8px 0 0}
+.quote{background:var(--bg2);border-left:2px solid var(--acc2);border-radius:8px;padding:12px 14px;margin:10px 0 0;
+ white-space:pre-wrap;font-size:14.5px;color:#dbe3ec}
+.acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.btn{border:1px solid var(--line2);background:var(--panel2);color:var(--tx);border-radius:9px;padding:8px 15px;font-size:13.5px}
+.btn:hover{border-color:#3f4b59}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#1a1206;font-weight:600}
+.btn.ghost{background:none}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.done{display:flex;align-items:center;gap:8px;color:var(--acc2);font-size:13.5px;margin-top:12px}
+.rejected{color:var(--bad)}
+
+/* table */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--rad);background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);font-weight:500;background:var(--bg2)}
+tr:last-child td{border-bottom:none}
+.st{font-size:11.5px;border-radius:6px;padding:3px 8px;white-space:nowrap;display:inline-block}
+.st.wait{background:rgba(224,185,63,.14);color:var(--warn)}
+.st.ok{background:rgba(94,200,164,.14);color:var(--acc2)}
+.st.no{background:rgba(226,105,95,.14);color:var(--bad)}
+.st.mod{background:rgba(154,167,181,.12);color:var(--tx2)}
+
+/* misc */
+.src{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx3)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot.real{background:var(--acc2)}.dot.sim{background:#4a5563}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.day{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px;min-height:82px}
+.day .d{font-size:11.5px;color:var(--tx3)}
+.day.pub{border-color:rgba(94,200,164,.35);background:rgba(94,200,164,.06)}
+.day .t{font-size:12.5px;margin-top:6px;line-height:1.35}
+.log{font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg2);border:1px solid var(--line);
+ border-radius:var(--rad);padding:16px 18px;max-height:420px;overflow:auto}
+.log .t{color:var(--tx3)}.log .a{color:var(--acc)}.log .g{color:var(--acc2)}
+.bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--acc2);width:0;transition:width .4s}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--panel2);border:1px solid var(--line2);
+ border-radius:10px;padding:12px 16px;font-size:14px;opacity:0;transform:translateY(8px);transition:.25s;z-index:50}
+.toast.on{opacity:1;transform:none}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+@media(max-width:900px){
+ .app{grid-template-columns:1fr}
+ aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+ nav{display:flex;gap:6px;overflow:auto}nav a{white-space:nowrap}
+ .c4,.c3,.c2{grid-template-columns:1fr}
+ .cal{grid-template-columns:repeat(2,1fr)}
+ .view{padding:18px 16px 50px}header{padding:14px 16px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="logo">Я</div>
+      <div><b>Карт-агент</b><a href="../" style="font-size:11.5px;color:var(--tx3);display:block">← к демо-аудиту</a></div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="side-note">
+      <b style="color:var(--tx2)">Демо-режим.</b> Кнопки меняют состояние только в этом браузере
+      и ничего не отправляют в Яндекс.
+    </div>
+  </aside>
+  <main>
+    <header>
+      <div class="org"><b>Завод Редукторов</b><span>Челябинск, пр. Ленина, 2 · org/208172675272</span></div>
+      <span class="pill bad" id="verif">не подтверждена владельцем</span>
+      <span class="pill" id="qcount">на подтверждении: 0</span>
+      <div class="spacer"></div>
+      <div class="role">
+        <button data-role="owner" class="on">Владелец</button>
+        <button data-role="op">Оператор</button>
+      </div>
+    </header>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const TABS=[
+ {id:'today',ic:'◉',t:'Сегодня'},
+ {id:'card',ic:'▣',t:'Карточка'},
+ {id:'reviews',ic:'★',t:'Отзывы'},
+ {id:'plan',ic:'▤',t:'Контент-план'},
+ {id:'ranks',ic:'▲',t:'Позиции'},
+ {id:'exp',ic:'◈',t:'Эксперименты'},
+ {id:'agents',ic:'⚙',t:'Агенты'},
+ {id:'reports',ic:'❒',t:'Отчёты'}
+];
+
+const TASKS=[
+ {id:'t1',by:'агент анализа',src:'real',need:1,title:'Карточка не подтверждена владельцем',
+  body:'Пока профиль не подтверждён, права на правки и ответы на отзывы отсутствуют — весь остальной конвейер работает вхолостую. Подтверждение занимает один звонок робота на номер организации.',
+  act:'Начать подтверждение',doneTx:'Подтверждение запущено'},
+ {id:'t2',by:'агент правок',src:'real',need:1,title:'Пакет правок готов: 9 полей карточки',
+  body:'Часы работы, местный телефон, описание, витрина услуг, рубрики, оплата, доставка, соцсети, категория фото. Открыть построчно можно на вкладке «Карточка».',
+  act:'Подтвердить пакет',doneTx:'Пакет подтверждён, ушёл в применение'},
+ {id:'t3',by:'агент контента',src:'real',need:1,title:'Новое описание организации',
+  body:'Написано под запросы «аналог SEW», «замена импортного редуктора», «редуктор под заказ». Цифры сроков и гарантии оставлены пустыми — их подставляет владелец.',
+  quote:'Завод Редукторов — производство и поставка редукторов и мотор-редукторов в Челябинске: цилиндрические, червячные, конические, вариаторы. Подбираем и изготавливаем аналоги импортных SEW, NORD, Bonfiglioli — по присоединительным размерам и передаточному числу…',
+  act:'Утвердить текст',doneTx:'Текст утверждён'},
+ {id:'t4',by:'агент отзывов',src:'sim',need:0,title:'Новых отзывов нет · отправлено 4 запроса',
+  body:'По вчерашним отгрузкам ушли письма с просьбой оставить отзыв и прямой ссылкой на карточку. Отвечать сегодня не на что — ждём первые оценки.',
+  act:'Посмотреть очередь',doneTx:'Просмотрено'},
+ {id:'t5',by:'агент контента',src:'sim',need:0,title:'Публикация на сегодня: склад готовой продукции',
+  body:'Кадр из банка, подпись готова: «Склад готовых редукторов — червячные NMRV и цилиндрические в наличии, отгрузка в день оплаты». Загрузка в карточку — две минуты.',
+  act:'Опубликовать',doneTx:'Опубликовано'},
+ {id:'t6',by:'агент разведки',src:'sim',need:0,title:'Конкурент нарастил активность',
+  body:'«Промышленные редукторы» добавили 3 фото и 2 отзыва за неделю и держатся в топе всех четырёх отслеживаемых запросов. Разрыв по отзывам растёт.',
+  act:'Принять к сведению',doneTx:'Учтено в плане'},
+ {id:'t7',by:'агент-критик',src:'real',need:1,title:'Гипотеза недели: услуга «Ремонт редуктора»',
+  body:'По запросу «ремонт редукторов» карточка вне топ-5, при этом такой услуги в карточке нет вообще. Ставим одно изменение, окно замера 14 дней.',
+  act:'Запустить эксперимент',doneTx:'Эксперимент запущен, замер до 12.09'}
+];
+
+const AUTO=[
+ 'снята выдача Яндекс.Карт по 4 запросам, позиции записаны в трекер',
+ 'пересняты карточки 4 конкурентов: рейтинг, отзывы, фото, цены',
+ 'проверены 13 полей нашей карточки, найдено 10 расхождений',
+ 'собран отчёт за прогон и обновлён график позиций'
+];
+
+const FIELDS=[
+ ['Часы работы','круглосуточно','пн–пт 08:00–17:00, сб 09:00–14:00 · приём заявок на сайте круглосуточно'],
+ ['Телефон','+7 (495) 157-67-23','+7 (351) …-…-… первым, московский вторым'],
+ ['Описание','короткий перечень типов продукции','переписано под запросы клиента, 3 абзаца'],
+ ['Товары и услуги','без цен','витрина из 6 позиций с ценами «от»'],
+ ['Рубрики','Редукторы · Транспортёры и конвейеры · Гидравлика','Редукторы · Электродвигатели · Промышленное оборудование'],
+ ['Способы оплаты','не заполнено','наличные, картой, перевод, предоплата, постоплата'],
+ ['Доставка и самовывоз','не заполнено','доставка по России, самовывоз со склада'],
+ ['Соцсети','не привязаны','VK, Telegram'],
+ ['Фото','15 шт.','+8 кадров: цех, склад, шильдик, отгрузка, ОТК, вход, инженер, пара «снятый — наш»']
+];
+
+const REVIEWS=[
+ {who:'Сергей М.',rate:5,tx:'Подобрали замену SEW R97 по фото шильдика, встал без переделки рамы. Отгрузили за четыре дня.',
+  ans:'Спасибо, Сергей. Рады, что редуктор встал без переделки рамы — для нас это главный критерий при подборе аналога. Если понадобится вторая единица или запчасти, ваш заказ у нас в базе, поднимем по номеру.',neg:0},
+ {who:'Игорь',rate:2,tx:'Обещали отгрузку в понедельник, уехало в четверг. Предупредить никто не догадался.',
+  ans:'Игорь, ситуация неприятная, и она наша. Отгрузка сдвинулась на три дня, о сдвиге вас не предупредили — это ошибка в нашем процессе, порядок информирования уже изменили. Готовы обсудить компенсацию, прямой контакт: …',neg:1}
+];
+
+const SHOTS=['Цех: станок в работе','Склад: стеллаж с готовыми','Шильдик крупным планом','Пара «снятый импортный — наша замена»','Отгрузка: паллета и маркировка','ОТК: замер штангенциркулем','Вход в офис с вывеской','Инженер за подбором'];
+
+const RANKS=[
+ ['редукторы','вне топ-5','Европривод · ТехноРедуктор Урал · Промышленные редукторы'],
+ ['мотор-редукторы','вне топ-5','Промышленные редукторы · Техноредуктор · Редукторы 74'],
+ ['ремонт редукторов','вне топ-5','Промышленные редукторы · ТехноРедуктор Урал · Редукторы 74'],
+ ['червячный редуктор','вне топ-5','Техноредуктор · Промышленные редукторы · Челябинский редукторный завод']
+];
+
+const EXPS=[
+ {h:'По «ремонт редукторов» не выигрываем, потому что такой услуги в карточке нет',
+  ch:'добавить услугу «Ремонт редуктора» с ценой «от»',m:'позиция по запросу «ремонт редукторов»',w:'14 дней · до 12.09',st:'запланирован',cl:'wait'},
+ {h:'Описание не даёт релевантности по «аналог SEW»',
+  ch:'вписать формулировку в описание и в название услуги',m:'позиция + переходы на сайт',w:'14 дней · после первого',st:'в очереди',cl:'mod'}
+];
+
+const RUN=[
+ ['координатор','поставил задачи, стадии 1→4'],
+ ['агент анализа карточки','снял 13 полей, нашёл 10 расхождений'],
+ ['агент разведки','прочитал выдачу по 4 запросам, снял 4 карточки конкурентов'],
+ ['агент сравнения','построил разрыв: отзывы 0 против 6–164, фото 15 против 27–52'],
+ ['агент-критик','отобрал 10 находок: 4 × P0, 4 × P1, 2 × P2'],
+ ['агент контента','описание, витрина из 6 позиций, 3 шаблона ответов, 8 кадров'],
+ ['агент правок','собрал пакет из 9 полей — ждёт подтверждения владельца'],
+ ['агент контроля','базовый замер зафиксирован, следующий пересъём 30.08'],
+ ['агент отчёта','отчёт за прогон сохранён']
+];
+
+const S=Object.assign({tasks:{},fields:'wait',role:'owner',tab:'today'},JSON.parse(localStorage.getItem('cab')||'{}'));
+const save=()=>localStorage.setItem('cab',JSON.stringify(S));
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const src=k=>`<span class="src"><i class="dot ${k==='real'?'real':'sim'}"></i>${k==='real'?'данные с Яндекс.Карт':'сценарий для показа'}</span>`;
+const LEGEND=`<div class="legend"><span class="src"><i class="dot real"></i>снято с Яндекс.Карт 29.08.2026</span><span class="src"><i class="dot sim"></i>смоделировано, чтобы показать рабочий день</span></div>`;
+
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2600)}
+function pending(){return TASKS.filter(t=>!S.tasks[t.id]).length}
+
+function nav(){
+  $('#nav').innerHTML=TABS.map(t=>`<a href="#${t.id}" class="${S.tab===t.id?'on':''}" data-tab="${t.id}">
+    <span class="ic">${t.ic}</span>${t.t}${t.id==='today'&&pending()?`<span class="cnt">${pending()}</span>`:''}</a>`).join('');
+  $('#qcount').textContent='на подтверждении: '+pending();
+}
+
+const V={};
+
+V.today=()=>`
+ <div class="vh"><h2>Сегодня · 29 августа</h2>
+ <p>Агенты отработали ночной прогон. Ниже — только то, что требует человека; всё остальное уже сделано и лежит на своих вкладках.</p></div>
+ <div class="row c4" style="margin-bottom:20px">
+   <div class="card kpi"><div class="n" id="k1">0</div><div class="l">ждут подтверждения</div></div>
+   <div class="card kpi"><div class="n ok">4</div><div class="l">сделано без человека</div></div>
+   <div class="card kpi"><div class="n bad">0</div><div class="l">отзывов на карточке</div></div>
+   <div class="card kpi"><div class="n bad">4 из 4</div><div class="l">запроса вне топ-5</div></div>
+ </div>
+ ${TASKS.map(t=>{
+   const st=S.tasks[t.id];
+   const lock=t.need&&S.role==='op';
+   return `<div class="task">
+     <div class="top"><span class="by">${t.by}</span>${src(t.src)}${t.need?'<span class="st wait">нужно решение владельца</span>':''}</div>
+     <h3>${esc(t.title)}</h3>
+     <p class="body">${esc(t.body)}</p>
+     ${t.quote?`<div class="quote">${esc(t.quote)}</div>`:''}
+     ${st==='done'?`<div class="done">✓ ${esc(t.doneTx)}</div>`
+      :st==='no'?`<div class="done rejected">× отклонено, вернулось агенту на переделку</div>`
+      :`<div class="acts">
+         <button class="btn pri" data-do="${t.id}" ${lock?'disabled':''}>${esc(t.act)}</button>
+         <button class="btn ghost" data-no="${t.id}" ${lock?'disabled':''}>Отклонить</button>
+         ${lock?'<span class="sm mut" style="align-self:center">роль «Оператор» не подтверждает — переключитесь на «Владелец»</span>':''}
+       </div>`}
+   </div>`}).join('')}
+ <div class="card" style="margin-top:6px">
+   <h3 style="font-size:15px;margin-bottom:10px">Сделано автоматически, решения не требует</h3>
+   ${AUTO.map(a=>`<div class="done" style="margin-top:6px">✓ <span class="mut">${esc(a)}</span></div>`).join('')}
+ </div>${LEGEND}`;
+
+V.card=()=>`
+ <div class="vh"><h2>Карточка · пакет правок</h2>
+ <p>Слева то, что стоит в карточке сейчас, справа — что предлагает система. Подтверждённые строки оператор вносит в кабинете Яндекс Бизнеса; для сети филиалов те же значения уходят выгрузкой автоматически.</p></div>
+ <div class="acts" style="margin-bottom:14px">
+   <button class="btn pri" id="okall" ${S.role==='op'?'disabled':''}>Подтвердить все 9 полей</button>
+   <button class="btn" id="copy">Скопировать пакет текстом</button>
+   ${S.role==='op'?'<span class="sm mut" style="align-self:center">подтверждение — за владельцем</span>':''}
+ </div>
+ <div class="tw"><table>
+  <tr><th>Поле</th><th>Сейчас</th><th>Предложено</th><th>Статус</th></tr>
+  ${FIELDS.map(f=>`<tr><td><b>${esc(f[0])}</b></td><td class="mut">${esc(f[1])}</td><td>${esc(f[2])}</td>
+   <td><span class="st ${S.fields==='ok'?'ok':'wait'}">${S.fields==='ok'?'подтверждено':'ждёт'}</span></td></tr>`).join('')}
+ </table></div>
+ <div class="card" style="margin-top:16px"><h3 style="font-size:15px;margin-bottom:8px">Что система менять не будет</h3>
+ <p class="sm mut" style="margin:0">Название организации — приписка ключей снимается модерацией. Цены, сроки и гарантия — подставляет владелец: агент не выдумывает цифры, которых нет в прайсе.</p></div>${LEGEND}`;
+
+V.reviews=()=>`
+ <div class="vh"><h2>Отзывы</h2>
+ <p>Норматив системы — ответ в течение суток. Ответ на положительный можно поставить на автопубликацию, ответ на негатив всегда идёт через подтверждение.</p></div>
+ <div class="row c3" style="margin-bottom:20px">
+   <div class="card kpi"><div class="n bad">0</div><div class="l">отзывов на карточке сейчас <span class="src"><i class="dot real"></i></span></div></div>
+   <div class="card kpi"><div class="n">12</div><div class="l">запросов отправлено клиентам</div></div>
+   <div class="card kpi"><div class="n ok">3</div><div class="l">оставили отзыв · 25 %</div></div>
+ </div>
+ <div class="card" style="margin-bottom:16px"><span class="src"><i class="dot sim"></i>дальше — сценарий: как выглядит работа, когда отзывы пойдут</span></div>
+ ${REVIEWS.map((r,i)=>{const lock=r.neg&&S.role==='op';const st=S.tasks['r'+i];
+  return `<div class="task">
+   <div class="top"><span class="by">${r.neg?'негативный':'положительный'} · ${r.rate}★</span><b>${esc(r.who)}</b>${r.neg?'<span class="st no">только с подтверждением</span>':'<span class="st ok">можно автоответ</span>'}</div>
+   <p class="body">${esc(r.tx)}</p>
+   <div class="quote"><b>Черновик ответа:</b>\n${esc(r.ans)}</div>
+   ${st?'<div class="done">✓ ответ опубликован</div>':`<div class="acts">
+     <button class="btn pri" data-do="r${i}" ${lock?'disabled':''}>Опубликовать ответ</button>
+     <button class="btn ghost" data-no="r${i}">Переписать</button>
+     ${lock?'<span class="sm mut" style="align-self:center">негатив публикует владелец</span>':''}</div>`}
+  </div>`}).join('')}${LEGEND}`;
+
+V.plan=()=>{
+ const days=[];for(let i=0;i<14;i++){const d=new Date(2026,7,29+i);days.push(d)}
+ let n=0;
+ return `<div class="vh"><h2>Контент-план · две недели</h2>
+ <p>Публикация через день — этим алгоритм Карт видит, что с карточкой работают. Кадры берутся из банка, подписи пишет агент контента. Загрузка в кабинет — две минуты в день.</p></div>
+ <div class="cal">${days.map((d,i)=>{const pub=i%2===0;const t=pub?SHOTS[n++%SHOTS.length]:'';
+  return `<div class="day ${pub?'pub':''}"><div class="d">${d.getDate()}.${String(d.getMonth()+1).padStart(2,'0')}</div>
+   <div class="t">${pub?esc(t):'<span class="mut" style="opacity:.5">пауза</span>'}</div></div>`}).join('')}</div>
+ <div class="card" style="margin-top:18px"><h3 style="font-size:15px;margin-bottom:8px">Банк материалов</h3>
+ <p class="sm mut" style="margin:0 0 10px">8 кадров в очереди, на две недели хватает. Для непрерывной работы нужно 20–30 — это единственное, что нельзя переложить на систему.</p>
+ <div class="bar"><i style="width:40%"></i></div><p class="xs mut" style="margin:8px 0 0">8 из 20 · пополнить банк</p></div>${LEGEND}`};
+
+V.ranks=()=>`
+ <div class="vh"><h2>Позиции в Картах</h2>
+ <p>Система читает выдачу по списку запросов каждый день и записывает, где стоит карточка. Это метрика, по которой видно, сработал эксперимент или нет.</p></div>
+ <div class="tw"><table>
+  <tr><th>Запрос · Челябинск</th><th>Наша позиция</th><th>Кто в топе</th><th>Замер</th></tr>
+  ${RANKS.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td><span class="st no">${esc(r[1])}</span></td>
+   <td class="mut">${esc(r[2])}</td><td class="mut">29.08</td></tr>`).join('')}
+ </table></div>
+ <div class="card" style="margin-top:16px">
+   <h3 style="font-size:15px;margin-bottom:8px">График</h3>
+   <p class="sm mut" style="margin:0">29.08 — базовая точка, линия появится со второго замера. Отметки экспериментов ставятся на график датой изменения, чтобы рост можно было связать с конкретной правкой, а не с догадкой.</p>
+   <svg viewBox="0 0 800 150" style="width:100%;height:auto;margin-top:12px">
+     <line x1="40" y1="120" x2="780" y2="120" stroke="#232b35" stroke-width="1.5"/>
+     <line x1="40" y1="30" x2="780" y2="30" stroke="#232b35" stroke-width="1" stroke-dasharray="4 5"/>
+     <text x="46" y="24" fill="#6b7886" font-size="12">топ-3</text>
+     <text x="46" y="114" fill="#6b7886" font-size="12">вне топ-5</text>
+     <circle cx="120" cy="120" r="5" fill="#e0a458"/>
+     <text x="104" y="142" fill="#9aa7b5" font-size="12">29.08</text>
+     <line x1="120" y1="120" x2="760" y2="120" stroke="#3a4552" stroke-width="2" stroke-dasharray="6 6"/>
+     <text x="430" y="108" fill="#6b7886" font-size="12">ожидание второго замера</text>
+   </svg>
+ </div>${LEGEND}`;
+
+V.exp=()=>`
+ <div class="vh"><h2>Эксперименты</h2>
+ <p>Одно изменение за раз, окно замера 14 дней, решение по цифрам: закрепить или откатить. Ежедневные правки не ставятся намеренно — модерация и задержка алгоритма делают такой результат неизмеримым.</p></div>
+ ${EXPS.map(e=>`<div class="task">
+   <div class="top"><span class="by">гипотеза</span><span class="st ${e.cl}">${esc(e.st)}</span></div>
+   <h3>${esc(e.h)}</h3>
+   <div class="row c3" style="margin-top:12px">
+     <div><div class="xs mut">что меняем</div><div class="sm">${esc(e.ch)}</div></div>
+     <div><div class="xs mut">метрика</div><div class="sm">${esc(e.m)}</div></div>
+     <div><div class="xs mut">окно</div><div class="sm">${esc(e.w)}</div></div>
+   </div></div>`).join('')}
+ <div class="card"><h3 style="font-size:15px;margin-bottom:8px">Правило</h3>
+ <p class="sm mut" style="margin:0">Пока идёт окно замера, другие правки в тех же полях не вносятся — иначе эффекты наложатся и объяснить рост будет нечем. Активность (фото, отзывы, ответы) при этом идёт своим чередом каждый день.</p></div>${LEGEND}`;
+
+V.agents=()=>`
+ <div class="vh"><h2>Агенты</h2>
+ <p>Последний прогон отработал ночью. Можно запустить вручную — например, после того как правки внесены и нужен пересъём.</p></div>
+ <div class="acts" style="margin-bottom:14px"><button class="btn pri" id="run">Запустить прогон</button>
+ <span class="sm mut" style="align-self:center" id="runst">последний прогон: 29.08, 04:10 · 9 агентов · 3 мин 40 с</span></div>
+ <div class="bar" style="margin-bottom:14px"><i id="pb"></i></div>
+ <div class="log" id="log">${RUN.map(r=>`<div><span class="t">04:10</span> <span class="a">${esc(r[0])}</span> — ${esc(r[1])}</div>`).join('')}</div>${LEGEND}`;
+
+V.reports=()=>`
+ <div class="vh"><h2>Отчёты</h2><p>Каждый прогон оставляет документ: было, стало, что осталось несделанным и почему.</p></div>
+ <div class="tw"><table>
+   <tr><th>Отчёт</th><th>Дата</th><th>Что внутри</th><th></th></tr>
+   <tr><td><b>Аудит карточки и рынка</b></td><td>29.08.2026</td>
+    <td class="mut">13 полей, 4 конкурента, 10 находок, пакет правок</td><td><a href="../">открыть →</a></td></tr>
+   <tr><td><b>Недельная сводка</b></td><td>05.09.2026</td><td class="mut">позиции, отзывы, публикации, итог эксперимента</td><td><span class="st mod">по расписанию</span></td></tr>
+ </table></div>${LEGEND}`;
+
+function render(){
+  $('#view').innerHTML=V[S.tab]();
+  const k=$('#k1'); if(k){k.textContent=pending(); k.className='n '+(pending()?'warn':'ok')}
+  nav(); save();
+}
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-tab]');
+  if(a){e.preventDefault();S.tab=a.dataset.tab;render();window.scrollTo(0,0);return}
+  const r=e.target.closest('[data-role]');
+  if(r){S.role=r.dataset.role;document.querySelectorAll('.role button').forEach(b=>b.classList.toggle('on',b===r));render();
+    toast(S.role==='owner'?'Роль: владелец — можно подтверждать':'Роль: оператор — готовит, но не подтверждает');return}
+  const d=e.target.closest('[data-do]');
+  if(d){S.tasks[d.dataset.do]='done';render();toast('Готово');return}
+  const n=e.target.closest('[data-no]');
+  if(n){S.tasks[n.dataset.no]='no';render();toast('Вернулось агенту на переделку');return}
+  if(e.target.id==='okall'){S.fields='ok';render();toast('Пакет подтверждён — 9 полей в применении')}
+  if(e.target.id==='copy'){
+    const t=FIELDS.map(f=>f[0]+': '+f[2]).join('\n');
+    navigator.clipboard?.writeText(t).then(()=>toast('Пакет скопирован — вставить в кабинет Яндекс Бизнеса'),()=>toast('Копирование недоступно в этом браузере'));
+  }
+  if(e.target.id==='run'){
+    const btn=e.target;btn.disabled=true;const log=$('#log');log.innerHTML='';const pb=$('#pb');
+    $('#runst').textContent='идёт прогон…';
+    RUN.forEach((row,i)=>setTimeout(()=>{
+      log.insertAdjacentHTML('beforeend',`<div><span class="t">сейчас</span> <span class="a">${esc(row[0])}</span> — ${esc(row[1])} <span class="g">✓</span></div>`);
+      log.scrollTop=log.scrollHeight;pb.style.width=Math.round((i+1)/RUN.length*100)+'%';
+      if(i===RUN.length-1){btn.disabled=false;$('#runst').textContent='прогон завершён · 9 агентов';toast('Прогон завершён, новых задач: 0')}
+    },420*(i+1)));
+  }
+});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(V[h]){S.tab=h;render()}});
+if(V[location.hash.slice(1)])S.tab=location.hash.slice(1);
+document.querySelectorAll('.role button').forEach(b=>b.classList.toggle('on',b.dataset.role===S.role));
+render();
+</script>
+</body>
+</html>

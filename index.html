@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ИИ-агент для Яндекс.Карт — демо на реальной карточке</title>
+<meta name="description" content="Демонстрация работы мультиагентной системы: аудит карточки организации на Яндекс.Картах, сравнение с конкурентами и готовый пакет правок.">
+<meta property="og:title" content="ИИ-агент для Яндекс.Карт — демо на реальной карточке">
+<meta property="og:description" content="Аудит карточки, сравнение с 4 конкурентами, готовый к вставке пакет правок и схема конвейера из 8 агентов.">
+<meta property="og:type" content="website">
+<style>
+:root{
+  --bg:#0b0d10; --bg2:#11151a; --panel:#151a21; --line:#232b35;
+  --tx:#e7ecf2; --tx2:#9aa7b5; --tx3:#6b7886;
+  --acc:#e0a458; --acc2:#5ec8a4; --bad:#e2695f; --warn:#e0b93f; --ok:#5ec8a4;
+  --rad:14px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);
+  font:400 17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+h1,h2,h3{line-height:1.2;letter-spacing:-.02em;margin:0}
+h1{font-size:clamp(30px,5vw,50px);font-weight:600}
+h2{font-size:clamp(24px,3.4vw,34px);font-weight:600;margin-bottom:14px}
+h3{font-size:20px;font-weight:600;margin-bottom:10px}
+p{margin:0 0 14px}
+a{color:var(--acc);text-decoration:none;border-bottom:1px solid rgba(224,164,88,.35)}
+a:hover{border-bottom-color:var(--acc)}
+section{padding:64px 0;border-top:1px solid var(--line)}
+.lead{color:var(--tx2);font-size:19px;max-width:760px}
+.mut{color:var(--tx2)}.sm{font-size:15px}.xs{font-size:13.5px}
+.tag{display:inline-block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--acc);border:1px solid rgba(224,164,88,.35);border-radius:99px;padding:5px 12px;margin-bottom:18px}
+.step{display:inline-block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);margin-bottom:10px}
+
+/* hero */
+header.hero{padding:88px 0 56px;background:
+  radial-gradient(900px 420px at 15% -10%,rgba(224,164,88,.14),transparent 60%),
+  radial-gradient(700px 380px at 85% 0%,rgba(94,200,164,.10),transparent 60%)}
+.hero .lead{margin-top:18px}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.meta span{font-size:13.5px;color:var(--tx2);background:var(--panel);border:1px solid var(--line);
+  border-radius:99px;padding:7px 14px}
+
+/* cards */
+.grid{display:grid;gap:16px}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--rad);padding:22px}
+.card h3{margin-bottom:8px}
+.num{font-size:34px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.num.bad{color:var(--bad)}.num.ok{color:var(--ok)}.num.warn{color:var(--warn)}
+
+/* table */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--rad);background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--tx3);font-weight:500;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--bg2);position:sticky;top:0}
+tr:last-child td{border-bottom:none}
+tr.us td{background:rgba(224,164,88,.07)}
+tr.us td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
+td b{font-weight:600}
+.no{color:var(--bad)}.yes{color:var(--ok)}
+
+/* findings */
+.find{border:1px solid var(--line);border-radius:var(--rad);background:var(--panel);
+  padding:20px 22px;margin-bottom:14px;display:grid;grid-template-columns:74px 1fr;gap:18px}
+.pri{font-size:12px;font-weight:600;letter-spacing:.06em;border-radius:8px;padding:6px 0;text-align:center;height:fit-content}
+.p0{background:rgba(226,105,95,.16);color:var(--bad);border:1px solid rgba(226,105,95,.4)}
+.p1{background:rgba(224,185,63,.14);color:var(--warn);border:1px solid rgba(224,185,63,.35)}
+.p2{background:rgba(154,167,181,.12);color:var(--tx2);border:1px solid var(--line)}
+.find h3{font-size:18px}
+.find .fix{margin-top:10px;padding-top:12px;border-top:1px dashed var(--line);color:var(--tx2);font-size:15.5px}
+.find .fix b{color:var(--tx)}
+
+/* copy blocks */
+.copy{background:#0e1216;border:1px solid var(--line);border-left:3px solid var(--acc2);
+  border-radius:10px;padding:18px 20px;margin:12px 0;font-size:16px;color:#dbe3ec;white-space:pre-wrap}
+.ph{color:var(--acc);border-bottom:1px dashed rgba(224,164,88,.5)}
+ul{margin:0 0 14px;padding-left:20px}li{margin-bottom:7px}
+.chk{list-style:none;padding:0}.chk li{padding-left:26px;position:relative}
+.chk li:before{content:"→";position:absolute;left:0;color:var(--acc2)}
+.no-list li:before{content:"×";color:var(--bad)}
+footer{padding:52px 0 70px;border-top:1px solid var(--line);color:var(--tx3);font-size:14.5px}
+@media(max-width:820px){.g3,.g2{grid-template-columns:1fr}.find{grid-template-columns:56px 1fr;gap:12px;padding:16px}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="tag">демо мультиагентной системы</span>
+    <h1>ИИ-агент, который улучшает<br>карточку компании в Яндекс.Картах</h1>
+    <p class="lead">Ниже — не презентация, а настоящий прогон. Агенты сняли реальную карточку организации,
+    сняли четырёх конкурентов из той же выдачи, нашли расхождения и собрали пакет правок,
+    который человек применяет в кабинете за 10 минут.</p>
+    <div class="meta">
+      <span>Объект: «Завод Редукторов», Челябинск</span>
+      <span>Конкуренты: 4 карточки из выдачи «редукторы»</span>
+      <span>Данные сняты 29.08.2026 из публичных карточек</span>
+    </div>
+  </div>
+</header>
+
+<section id="analysis">
+  <div class="wrap">
+    <span class="step">Шаг 1 · агент анализа карточки</span>
+    <h2>Что агент увидел в нашей карточке</h2>
+    <p class="lead">Снимаются все поля, которые видит клиент. Отдельно помечается то, что заполнено формально или противоречит реальности.</p>
+
+    <div class="grid g3" style="margin:26px 0">
+      <div class="card"><div class="num bad">0</div><p class="sm mut" style="margin:10px 0 0">отзывов и ни одной оценки — у конкурентов в этой же выдаче от 6 до 164</p></div>
+      <div class="card"><div class="num warn">15</div><p class="sm mut" style="margin:10px 0 0">фотографий против 27–52 у соседей по выдаче</p></div>
+      <div class="card"><div class="num bad">5 из 12</div><p class="sm mut" style="margin:10px 0 0">ключевых полей карточки заполнены содержательно</p></div>
+    </div>
+
+    <div class="tw">
+      <table>
+        <tr><th>Поле карточки</th><th>Что стоит сейчас</th><th>Вердикт агента</th></tr>
+        <tr><td>Название</td><td>Завод Редукторов</td><td class="yes">норма</td></tr>
+        <tr><td>Рубрики</td><td>Редукторы · Транспортёры и конвейеры · Гидравлическое и пневматическое оборудование</td><td class="mut">основная верна, вторая и третья уводят от профиля</td></tr>
+        <tr><td>Адрес</td><td>Челябинск, проспект Ленина, 2, офис 221</td><td class="yes">норма</td></tr>
+        <tr><td>Телефон</td><td>+7 (495) 157-67-23</td><td class="no">московский номер на челябинском адресе</td></tr>
+        <tr><td>Часы работы</td><td>круглосуточно</td><td class="no">офис не работает круглосуточно</td></tr>
+        <tr><td>Сайт</td><td>zavod-red.ru</td><td class="yes">норма</td></tr>
+        <tr><td>Описание</td><td>короткий перечень типов продукции</td><td class="no">нет конкретики, нет запросов клиента</td></tr>
+        <tr><td>Услуги и цены</td><td>услуги перечислены, прайса нет</td><td class="no">цены не попадают в сниппет выдачи</td></tr>
+        <tr><td>Фото</td><td>15 шт. + панорама</td><td class="no">мало, нет производства и склада</td></tr>
+        <tr><td>Способы оплаты и доставка</td><td>не заполнено</td><td class="no">пустые атрибуты режут полноту</td></tr>
+        <tr><td>Соцсети в карточке</td><td>не привязаны</td><td class="no">VK и Telegram есть на сайте, но не в Картах</td></tr>
+        <tr><td>Верификация владельцем</td><td>признаков нет</td><td class="no">без неё нет прав на правки и ответы</td></tr>
+        <tr><td>Спецпредложение</td><td>дилерская скидка 15 %</td><td class="yes">рабочий элемент, оставить</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="market">
+  <div class="wrap">
+    <span class="step">Шаг 2 · агент разведки и агент сравнения</span>
+    <h2>Против кого мы стоим в выдаче</h2>
+    <p class="lead">Первая пятёрка по запросу «редукторы» в Челябинске. Нашей карточки в ней нет — она проигрывает по единственному фактору, который Карты считают главным.</p>
+
+    <div class="tw" style="margin-top:24px">
+      <table>
+        <tr><th>Компания</th><th>Рейтинг</th><th>Отзывы</th><th>Фото</th><th>Цены в карточке</th><th>Соцсети</th><th>Чем цепляет</th></tr>
+        <tr><td><b>Европривод</b><br><span class="xs mut">с. Кременкуль</span></td><td>4,9</td><td>164 оценки / 43 отзыва</td><td>—</td><td class="yes">от 2 850 ₽</td><td>—</td><td>«оловянная бронза вместо алюминиевой», прайс прямо в карточке</td></tr>
+        <tr><td><b>ТехноРедуктор Урал</b><br><span class="xs mut">ул. Ворошилова</span></td><td>4,8</td><td>42 оценки / 16 отзывов</td><td>52</td><td>—</td><td>TG, WA, Viber, VK</td><td>гарантия 2 года, отгрузка ≈5 дней, 6 способов оплаты</td></tr>
+        <tr><td><b>Промышленные редукторы</b><br><span class="xs mut">ул. Труда</span></td><td>4,8</td><td>33 оценки / 19 отзывов</td><td>34</td><td>—</td><td>VK, TG, Дзен</td><td>профиль верифицирован владельцем, импортозамещение</td></tr>
+        <tr><td><b>Редукторы 74</b><br><span class="xs mut">ул. Красная</span></td><td>4,4</td><td>6 оценок / 6 отзывов</td><td>27</td><td>—</td><td>TG, WA</td><td>изготовление под заказ, полная доступность</td></tr>
+        <tr class="us"><td><b>Завод Редукторов</b><br><span class="xs mut">пр. Ленина — наша карточка</span></td><td class="no">нет</td><td class="no">0</td><td>15</td><td class="no">нет</td><td class="no">нет</td><td>дилерская скидка 15 % — единственный отличающий элемент</td></tr>
+      </table>
+    </div>
+    <p class="sm mut" style="margin-top:14px">Вывод агента сравнения: разрыв не в качестве продукта, а в трёх вещах — отзывы, цены в карточке, полнота полей. Всё три закрываются без бюджета на рекламу.</p>
+  </div>
+</section>
+
+<section id="findings">
+  <div class="wrap">
+    <span class="step">Шаг 3 · агент-критик</span>
+    <h2>Находки, отсортированные по деньгам</h2>
+    <p class="lead">Критик отбрасывает косметику и оставляет то, что реально влияет на показы и звонки. У каждой находки — причина и точка исправления.</p>
+
+    <div style="margin-top:26px">
+      <div class="find"><div class="pri p0">P0</div><div>
+        <h3>Ноль отзывов при 4,4–4,9 у всех соседей</h3>
+        <p class="mut" style="margin:0">Рейтинг — сильнейший фактор ранжирования в Картах и первое, на что смотрит клиент. Карточка без единой оценки не попадает в верх выдачи и проигрывает даже при более низкой цене.</p>
+        <div class="fix"><b>Что делает система:</b> готовит текст запроса отзыва, ссылку и QR под отгрузку, ставит напоминание менеджеру после каждой сделки, следит за приростом. Накрутки не делаем — Яндекс её ловит фильтром и карточка теряет рейтинг совсем.</div>
+      </div></div>
+
+      <div class="find"><div class="pri p0">P0</div><div>
+        <h3>Московский номер на челябинском адресе</h3>
+        <p class="mut" style="margin:0">Код +7 495 при адресе на проспекте Ленина читается как перепродажа, а не производство. Местный клиент выбирает соседнюю карточку с кодом 351.</p>
+        <div class="fix"><b>Что делает система:</b> предлагает поставить местный номер первым, московский — вторым. Правка требует подтверждения владельца.</div>
+      </div></div>
+
+      <div class="find"><div class="pri p0">P0</div><div>
+        <h3>Часы работы «круглосуточно»</h3>
+        <p class="mut" style="margin:0">Клиент звонит в 22:40, не дозванивается — и оставляет первый отзыв на одну звезду. Расхождение графика с реальностью считается недостоверными данными.</p>
+        <div class="fix"><b>Что делает система:</b> ставит реальный график, отдельно помечает «приём заявок на сайте — круглосуточно».</div>
+      </div></div>
+
+      <div class="find"><div class="pri p0">P0</div><div>
+        <h3>Профиль не подтверждён владельцем</h3>
+        <p class="mut" style="margin:0">Без подтверждения нельзя ни редактировать данные, ни отвечать на отзывы, а любой пользователь может предложить правку в карточку.</p>
+        <div class="fix"><b>Что делает система:</b> ничего — это единственный шаг, который делает только человек: подтверждение по звонку или письму в кабинете Яндекс Бизнеса. Без него весь остальной конвейер работает вхолостую.</div>
+      </div></div>
+
+      <div class="find"><div class="pri p1">P1</div><div>
+        <h3>Описание не отвечает ни на один вопрос клиента</h3>
+        <p class="mut" style="margin:0">Сейчас это перечень типов продукции. У конкурентов в том же поле — конкретика: материал, гарантия, срок отгрузки. По ней и выбирают.</p>
+        <div class="fix"><b>Что делает система:</b> пишет описание под запросы («аналог SEW», «замена импортного редуктора», «редуктор под заказ») — готовый текст ниже.</div>
+      </div></div>
+
+      <div class="find"><div class="pri p1">P1</div><div>
+        <h3>Нет цен в карточке</h3>
+        <p class="mut" style="margin:0">Европривод показывает «от 2 850 ₽» прямо в выдаче и снимает половину звонков-разведок. Наша карточка на этом месте пустая.</p>
+        <div class="fix"><b>Что делает система:</b> собирает витрину из 6–8 позиций с ценами «от» и обновляет её по прайсу с сайта.</div>
+      </div></div>
+
+      <div class="find"><div class="pri p1">P1</div><div>
+        <h3>15 фотографий, ни одной с производства</h3>
+        <p class="mut" style="margin:0">У соседей 27–52 снимка: цех, склад, отгрузка, люди. Это же и есть доказательство, что «завод» — завод.</p>
+        <div class="fix"><b>Что делает система:</b> выдаёт список из 8 недостающих кадров с описанием ракурса — снимает их человек на телефон, за один обход цеха.</div>
+      </div></div>
+
+      <div class="find"><div class="pri p1">P1</div><div>
+        <h3>Пустые атрибуты: оплата, доставка, самовывоз</h3>
+        <p class="mut" style="margin:0">Полнота карточки учитывается при ранжировании, а фильтры выдачи («оплата картой», «доставка») просто не показывают карточку с незаполненными полями.</p>
+        <div class="fix"><b>Что делает система:</b> готовый список галочек к проставлению в кабинете.</div>
+      </div></div>
+
+      <div class="find"><div class="pri p2">P2</div><div>
+        <h3>Соцсети есть на сайте, но не привязаны к карточке</h3>
+        <p class="mut" style="margin:0">Три конкурента из четырёх выводят мессенджеры прямо в карточке — это ещё один канал заявки, который у нас не подключён.</p>
+        <div class="fix"><b>Что делает система:</b> подставляет ссылки VK и Telegram в соответствующие поля кабинета.</div>
+      </div></div>
+
+      <div class="find"><div class="pri p2">P2</div><div>
+        <h3>Вторая и третья рубрики уводят от профиля</h3>
+        <p class="mut" style="margin:0">«Гидравлическое и пневматическое оборудование» тянет нерелевантные показы и разбавляет основную тему.</p>
+        <div class="fix"><b>Что делает система:</b> предлагает заменить на смежные по спросу — электродвигатели и промышленное оборудование.</div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section id="package">
+  <div class="wrap">
+    <span class="step">Шаг 4 · агент контента</span>
+    <h2>Пакет правок — готов к вставке</h2>
+    <p class="lead">Это и есть результат работы системы: не советы, а конечный текст под каждое поле кабинета.
+    <span class="ph">Оранжевым</span> помечено то, что агент не имеет права выдумывать — цифры подставляет владелец.</p>
+
+    <h3 style="margin-top:32px">Описание организации</h3>
+    <div class="copy">Завод Редукторов — производство и поставка редукторов и мотор-редукторов в Челябинске: цилиндрические, червячные, конические, вариаторы. Подбираем и изготавливаем аналоги импортных SEW, NORD, Bonfiglioli — по присоединительным размерам и передаточному числу, с сохранением посадочных мест: старый редуктор снимается, новый встаёт на то же основание.
+
+Что делаем: подбор по техническим характеристикам, изготовление под заказ, ремонт и замена, отгрузка по России. Срок изготовления под заказ — от <span class="ph">__ дней</span>, гарантия <span class="ph">__ месяцев</span>. Дилерам — скидка 15 %.
+
+Пришлите марку и модель редуктора или фото шильдика — подберём замену и назовём цену в тот же день.</div>
+
+    <h3 style="margin-top:32px">Витрина услуг с ценами</h3>
+    <div class="tw">
+      <table>
+        <tr><th>Позиция</th><th>Цена в карточке</th><th>Пояснение под названием</th></tr>
+        <tr><td>Червячный мотор-редуктор NMRV</td><td class="ph">от __ ₽</td><td>в наличии, отгрузка со склада</td></tr>
+        <tr><td>Цилиндрический редуктор</td><td class="ph">от __ ₽</td><td>одно- и двухступенчатые</td></tr>
+        <tr><td>Аналог редуктора SEW</td><td class="ph">от __ ₽</td><td>замена по присоединительным размерам</td></tr>
+        <tr><td>Аналог редуктора NORD</td><td class="ph">от __ ₽</td><td>подбор по шильдику</td></tr>
+        <tr><td>Ремонт редуктора</td><td class="ph">от __ ₽</td><td>дефектовка бесплатно</td></tr>
+        <tr><td>Редуктор под заказ</td><td class="ph">от __ ₽</td><td>по чертежу заказчика</td></tr>
+      </table>
+    </div>
+    <p class="sm mut" style="margin-top:12px">Цены агент берёт из прайса на сайте автоматически при следующем прогоне — здесь оставлены пустыми намеренно: система не придумывает цифры, которых нет в источнике.</p>
+
+    <h3 style="margin-top:32px">Съёмка: 8 недостающих кадров</h3>
+    <ul class="chk">
+      <li>Цех: станок в работе, редуктор в кадре крупно</li>
+      <li>Склад: стеллаж с готовыми редукторами, видно объём</li>
+      <li>Шильдик собственного изделия крупным планом</li>
+      <li>Пара «снятый импортный — наша замена» рядом, один ракурс</li>
+      <li>Отгрузка: паллета, упаковка, транспортная маркировка</li>
+      <li>ОТК: замер на столе, штангенциркуль в руках</li>
+      <li>Вход в офис с вывеской — чтобы клиент нашёл 221-й кабинет</li>
+      <li>Инженер за подбором, два монитора с чертежом</li>
+    </ul>
+
+    <h3 style="margin-top:32px">Шаблоны ответов на отзывы</h3>
+    <p class="sm mut">Ответ владельца поднимает карточку и виден всем следующим читателям. Норматив системы — ответ в течение суток.</p>
+    <div class="copy"><b>Положительный.</b> Спасибо, <span class="ph">Имя</span>. Рады, что редуктор встал без переделки рамы — для нас это главный критерий при подборе аналога. Если понадобится вторая единица или запчасти, ваш заказ у нас в базе, поднимем по номеру.</div>
+    <div class="copy"><b>Нейтральный, про сроки.</b> <span class="ph">Имя</span>, спасибо, что написали. По вашему заказу отгрузка сдвинулась на <span class="ph">__ дней</span> — причина в <span class="ph">___</span>. Мы поменяли порядок информирования: теперь о сдвиге сообщаем в день, когда он стал известен, а не по факту. Готовы обсудить компенсацию — <span class="ph">телефон</span>.</div>
+    <div class="copy"><b>Негативный.</b> <span class="ph">Имя</span>, ситуация неприятная, и она наша. Разбираем: <span class="ph">что именно произошло</span>. Что делаем — <span class="ph">замена / возврат / выезд</span>, срок <span class="ph">__</span>. Прямой контакт для решения: <span class="ph">телефон, имя ответственного</span>. Вернёмся сюда и напишем, чем закончилось.</div>
+    <p class="sm mut">Правило системы: агент готовит ответ, публикует его человек. Ответ на негатив уходит только после подтверждения — цена ошибки здесь выше, чем экономия минуты.</p>
+
+    <h3 style="margin-top:32px">Сбор отзывов — легально</h3>
+    <div class="copy">Здравствуйте, <span class="ph">Имя</span>. Редуктор <span class="ph">модель</span> отгружен <span class="ph">дата</span>. Если встал нормально — оставьте, пожалуйста, пару строк на Яндекс.Картах, это две минуты: <span class="ph">ссылка</span>. Если что-то не так — ответьте на это письмо, разберём до отзыва.</div>
+    <p class="sm mut">Отправляется после отгрузки, по своей клиентской базе. Ничего не покупаем и не пишем за клиентов: накрученные отзывы Яндекс распознаёт и обнуляет рейтинг вместе с доверием к карточке.</p>
+  </div>
+</section>
+
+<section id="apply">
+  <div class="wrap">
+    <span class="step">Шаг 5 · агент правок и агент контроля</span>
+    <h2>Как правки попадают в карточку</h2>
+    <p class="lead">Здесь единственное честное ограничение всей затеи: у Яндекс.Карт нет открытого интерфейса, через который робот мог бы переписать карточку. Поэтому запись устроена так.</p>
+
+    <div class="grid g3" style="margin-top:26px">
+      <div class="card">
+        <h3>Одна точка</h3>
+        <p class="sm mut">Агент отдаёт пакет «поле → текст». Владелец вставляет его в кабинете Яндекс Бизнеса. Десять минут раз в две недели — весь ручной труд.</p>
+      </div>
+      <div class="card">
+        <h3>Сеть филиалов</h3>
+        <p class="sm mut">От десяти филиалов Яндекс забирает данные фидом: система кладёт XML на сайт, Яндекс сам обновляет все карточки. Здесь запись действительно автоматическая.</p>
+      </div>
+      <div class="card">
+        <h3>Чего не делаем</h3>
+        <p class="sm mut">Робота, который сам кликает в кабинете. Это капча, риск блокировки аккаунта и потери карточки. Экономия десяти минут не стоит карточки.</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:34px">Контроль: что проверяется после применения</h3>
+    <ul class="chk">
+      <li>Через сутки — пересъём карточки и дифф: какие поля реально изменились, что Яндекс отклонил на модерации</li>
+      <li>Через две недели — позиция в выдаче по ключевым запросам, прирост отзывов, изменения у конкурентов</li>
+      <li>Каждый прогон ложится в отчёт: было / стало / что осталось несделанным и почему</li>
+    </ul>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <span class="step">Архитектура</span>
+    <h2>Конвейер из восьми агентов</h2>
+    <p class="lead">Один агент «на всё» ошибается и сам себя хвалит. Поэтому задача разрезана: тот, кто предлагает, и тот, кто проверяет, — разные агенты, и между контентом и записью стоит человек.</p>
+
+    <div style="margin:30px 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--rad);padding:20px">
+    <svg viewBox="0 0 900 660" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема конвейера из восьми агентов">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#5ec8a4"/>
+        </marker>
+        <style>
+          .bx{fill:#171d25;stroke:#2c3641;stroke-width:1.5;rx:10}
+          .ti{fill:#e7ecf2;font:600 16px -apple-system,Segoe UI,Roboto,sans-serif}
+          .su{fill:#9aa7b5;font:400 13px -apple-system,Segoe UI,Roboto,sans-serif}
+          .lb{fill:#6b7886;font:600 11px -apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:1.4px}
+          .ln{stroke:#5ec8a4;stroke-width:2;fill:none;marker-end:url(#ar)}
+        </style>
+      </defs>
+
+      <rect x="20" y="14" width="860" height="48" rx="10" fill="#1b2029" stroke="#3a4552" stroke-width="1.5"/>
+      <text class="ti" x="450" y="36" text-anchor="middle">Агент-координатор</text>
+      <text class="su" x="450" y="54" text-anchor="middle">ставит задачи, держит порядок стадий, собирает результат в один отчёт</text>
+
+      <text class="lb" x="60" y="92">1 · СБОР ДАННЫХ</text>
+      <rect class="bx" x="60" y="102" width="370" height="64"/>
+      <text class="ti" x="80" y="128">Агент анализа карточки</text>
+      <text class="su" x="80" y="149">снимает все поля, ищет пустое и недостоверное</text>
+      <rect class="bx" x="470" y="102" width="370" height="64"/>
+      <text class="ti" x="490" y="128">Агент разведки</text>
+      <text class="su" x="490" y="149">выдача по запросам, карточки конкурентов, цены</text>
+      <path class="ln" d="M450,170 V196"/>
+
+      <text class="lb" x="60" y="216">2 · РЕШЕНИЕ</text>
+      <rect class="bx" x="60" y="226" width="370" height="64"/>
+      <text class="ti" x="80" y="252">Агент сравнения</text>
+      <text class="su" x="80" y="273">где именно мы отстаём и на сколько</text>
+      <rect class="bx" x="470" y="226" width="370" height="64"/>
+      <text class="ti" x="490" y="252">Агент-критик</text>
+      <text class="su" x="490" y="273">отбрасывает косметику, оставляет то, что даёт деньги</text>
+      <path class="ln" d="M450,294 V320"/>
+
+      <text class="lb" x="60" y="340">3 · КОНТЕНТ</text>
+      <rect class="bx" x="60" y="350" width="780" height="64"/>
+      <text class="ti" x="80" y="376">Агент контента</text>
+      <text class="su" x="80" y="397">описание, услуги с ценами, ответы на отзывы, задание на съёмку</text>
+      <path class="ln" d="M450,418 V444"/>
+
+      <rect x="60" y="450" width="780" height="60" rx="10" fill="rgba(224,164,88,.09)" stroke="#e0a458" stroke-width="1.6" stroke-dasharray="7 5"/>
+      <text x="450" y="476" text-anchor="middle" fill="#e0a458" font="600 16px sans-serif" style="font:600 16px -apple-system,Segoe UI,Roboto,sans-serif">Подтверждение владельца</text>
+      <text class="su" x="450" y="496" text-anchor="middle">ничего не уходит в карточку и в отзывы без явного «да»</text>
+      <path class="ln" d="M450,514 V540"/>
+
+      <text class="lb" x="60" y="560">4 · ВЫПОЛНЕНИЕ</text>
+      <rect class="bx" x="60" y="570" width="240" height="66"/>
+      <text class="ti" x="78" y="596">Агент правок</text>
+      <text class="su" x="78" y="616">пакет в кабинет</text>
+      <text class="su" x="78" y="631">или XML-фид для сети</text>
+      <rect class="bx" x="330" y="570" width="240" height="66"/>
+      <text class="ti" x="348" y="596">Агент контроля</text>
+      <text class="su" x="348" y="616">пересъём и дифф:</text>
+      <text class="su" x="348" y="631">что реально применилось</text>
+      <rect class="bx" x="600" y="570" width="240" height="66"/>
+      <text class="ti" x="618" y="596">Агент отчёта</text>
+      <text class="su" x="618" y="616">было / стало /</text>
+      <text class="su" x="618" y="631">что осталось</text>
+
+      <path class="ln" d="M840,603 H868 V134 H845" stroke-dasharray="6 5"/>
+      <text class="lb" x="874" y="360" transform="rotate(90 874 360)" text-anchor="middle">ЦИКЛ РАЗ В 2 НЕДЕЛИ</text>
+    </svg>
+    </div>
+
+    <h3 style="margin-top:8px">Агент — задача — результат</h3>
+    <div class="tw">
+      <table>
+        <tr><th>Агент</th><th>Задача</th><th>Что отдаёт</th><th>Режим</th></tr>
+        <tr><td>Координатор</td><td>распределить работу, собрать всё вместе</td><td>план прогона</td><td class="yes">авто</td></tr>
+        <tr><td>Анализа карточки</td><td>снять текущее состояние</td><td>таблица полей с вердиктами</td><td class="yes">авто</td></tr>
+        <tr><td>Разведки</td><td>собрать выдачу и конкурентов</td><td>сравнительная таблица рынка</td><td class="yes">авто</td></tr>
+        <tr><td>Сравнения</td><td>найти разрывы</td><td>список отставаний с цифрами</td><td class="yes">авто</td></tr>
+        <tr><td>Критик</td><td>отсеять пустое</td><td>находки P0/P1/P2</td><td class="yes">авто</td></tr>
+        <tr><td>Контента</td><td>написать то, что вставят</td><td>тексты, витрина, ответы, ТЗ на фото</td><td class="yes">авто</td></tr>
+        <tr><td>Правок</td><td>довести до карточки</td><td>пакет «поле → значение» или XML-фид</td><td class="no">только после подтверждения</td></tr>
+        <tr><td>Контроля</td><td>проверить, что применилось</td><td>дифф до/после, что отклонила модерация</td><td class="yes">авто</td></tr>
+        <tr><td>Отчёта</td><td>зафиксировать</td><td>отчёт за прогон и динамика за месяц</td><td class="yes">авто</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="wrap">
+    <h2>Границы — чтобы не было сюрпризов</h2>
+    <div class="grid g2" style="margin-top:24px">
+      <div class="card">
+        <h3>Система не делает</h3>
+        <ul class="chk no-list">
+          <li>Накрутку отзывов и рейтинга — это фильтр Яндекса и потеря карточки</li>
+          <li>Отзывы от несуществующих клиентов</li>
+          <li>Публикацию ответа на негатив без подтверждения</li>
+          <li>Автокликера в кабинете Яндекс Бизнеса</li>
+          <li>Цифры, которых нет в источнике: цены, сроки, гарантию подставляет владелец</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Что нужно для запуска</h3>
+        <ul class="chk">
+          <li>Права владельца карточки в Яндекс Бизнесе — подтверждение по звонку или письму</li>
+          <li>Реальные часы работы, местный телефон, прайс — источник для агента контента</li>
+          <li>Полчаса на съёмку восьми кадров в цеху</li>
+          <li>Решение, кто нажимает «сохранить»: владелец или мы под его учётной записью</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Демонстрационный прогон. Все данные о карточках получены 29 августа 2026 года из публично доступных страниц Яндекс.Карт и приведены как есть; рейтинги и отзывы принадлежат их владельцам. Страница не связана с Яндексом.</p>
+    <p style="margin:0">Собрано мультиагентным конвейером в Claude Code.</p>
+  </div>
+</footer>
+
+</body>
+</html>
